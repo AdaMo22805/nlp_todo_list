@@ -100,6 +100,12 @@ def clear_completed() -> list[Task]:
     return removed
 
 
+def reset_all() -> list[Task]:
+    tasks = load_tasks()
+    save_tasks([])
+    return tasks
+
+
 def _find(tasks: list[Task], task_id: int) -> Task:
     for t in tasks:
         if t.id == task_id:

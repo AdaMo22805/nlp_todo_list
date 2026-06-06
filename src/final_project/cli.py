@@ -286,6 +286,27 @@ def clear(
     console.print(f"[red]-[/red] Cleared {len(removed)} completed task(s).")
 
 
+@app.command()
+def reset(
+    yes: Annotated[
+        bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")
+    ] = False,
+) -> None:
+    """Delete ALL tasks (completed and pending). Cannot be undone."""
+    tasks = core.list_tasks(show_done=True)
+    if not tasks:
+        console.print("[dim]No tasks to delete.[/dim]")
+        return
+    if not yes and not typer.confirm(
+        f"Delete ALL {len(tasks)} task(s)? This cannot be undone.",
+        default=False,
+    ):
+        console.print("[dim]Aborted.[/dim]")
+        raise typer.Exit(0)
+    removed = core.reset_all()
+    console.print(f"[red]-[/red] Deleted all {len(removed)} task(s).")
+
+
 def _peek(task_id: int) -> Task:
     for t in core.list_tasks(show_done=True):
         if t.id == task_id:

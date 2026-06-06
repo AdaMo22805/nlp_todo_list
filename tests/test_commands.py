@@ -7,6 +7,7 @@ from final_project.commands import (
     list_tasks,
     mark_done,
     mark_undone,
+    reset_all,
     update_task,
 )
 from final_project.models import Priority
@@ -211,3 +212,25 @@ def test_clear_completed_returns_empty_when_nothing_done(todo_file):
     create_task("a")
     assert clear_completed() == []
     assert [t.id for t in list_tasks()] == [1]
+
+
+def test_reset_all_removes_done_and_pending(todo_file):
+    create_task("a")
+    create_task("b")
+    create_task("c")
+    mark_done(1)
+    removed = reset_all()
+    assert {t.id for t in removed} == {1, 2, 3}
+    assert list_tasks(show_done=True) == []
+
+
+def test_reset_all_empty(todo_file):
+    assert reset_all() == []
+
+
+def test_reset_all_then_create_starts_id_at_1(todo_file):
+    create_task("a")
+    create_task("b")
+    reset_all()
+    new = create_task("c")
+    assert new.id == 1

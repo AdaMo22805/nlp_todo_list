@@ -295,3 +295,36 @@ def test_clear_prompt_no_aborts(todo_file):
     assert result.exit_code == 0
     assert "Aborted" in _clean(result.output)
     assert "alpha" in _ls(["--all"])
+
+
+# ---------- reset ----------
+
+def test_reset_with_yes_flag_wipes_everything(todo_file):
+    runner.invoke(app, ["add", "alpha"])
+    runner.invoke(app, ["add", "beta"])
+    runner.invoke(app, ["done", "1"])
+    result = runner.invoke(app, ["reset", "-y"])
+    assert result.exit_code == 0
+    assert "Deleted all" in _clean(result.output)
+    assert "No tasks" in _ls(["--all"])
+
+
+def test_reset_prompt_yes_wipes(todo_file):
+    runner.invoke(app, ["add", "alpha"])
+    result = runner.invoke(app, ["reset"], input="y\n")
+    assert result.exit_code == 0
+    assert "Deleted all" in _clean(result.output)
+
+
+def test_reset_prompt_no_aborts(todo_file):
+    runner.invoke(app, ["add", "alpha"])
+    result = runner.invoke(app, ["reset"], input="n\n")
+    assert result.exit_code == 0
+    assert "Aborted" in _clean(result.output)
+    assert "alpha" in _ls()
+
+
+def test_reset_empty(todo_file):
+    result = runner.invoke(app, ["reset"])
+    assert result.exit_code == 0
+    assert "No tasks" in _clean(result.output)
