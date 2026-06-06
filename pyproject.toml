@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-final-project = "final_project:main"
+todo = "final_project.cli:app"
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]

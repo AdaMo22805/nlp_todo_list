@@ -120,6 +120,24 @@ def test_update_task_not_found_raises(todo_file):
         update_task(999, text="x")
 
 
+def test_update_task_clear_due(todo_file):
+    create_task("a", due="2026-06-10")
+    updated = update_task(1, clear_due=True)
+    assert updated.due is None
+
+
+def test_update_task_clear_tags(todo_file):
+    create_task("a", tags=["school", "work"])
+    updated = update_task(1, clear_tags=True)
+    assert updated.tags == []
+
+
+def test_update_task_clear_due_overrides_due_arg(todo_file):
+    create_task("a", due="2026-06-10")
+    updated = update_task(1, due="2026-07-01", clear_due=True)
+    assert updated.due is None
+
+
 def test_delete_task_removes_from_list(todo_file):
     create_task("a")
     create_task("b")

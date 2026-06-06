@@ -1,2 +1,3 @@
-def main() -> None:
-    print("Hello from final-project!")
+from .cli import app
+
+__all__ = ["app"]

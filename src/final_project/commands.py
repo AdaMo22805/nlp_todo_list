@@ -45,6 +45,8 @@ def update_task(
     priority: Priority | None = None,
     due: str | None = None,
     tags: list[str] | None = None,
+    clear_due: bool = False,
+    clear_tags: bool = False,
 ) -> Task:
     tasks = load_tasks()
     task = _find(tasks, task_id)
@@ -52,9 +54,13 @@ def update_task(
         task.text = text
     if priority is not None:
         task.priority = priority
-    if due is not None:
+    if clear_due:
+        task.due = None
+    elif due is not None:
         task.due = due
-    if tags is not None:
+    if clear_tags:
+        task.tags = []
+    elif tags is not None:
         task.tags = tags
     save_tasks(tasks)
     return task
