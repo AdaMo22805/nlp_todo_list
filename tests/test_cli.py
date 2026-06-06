@@ -37,6 +37,18 @@ def test_add_medium_priority(todo_file):
     assert "med" in _ls()
 
 
+def test_add_long_priority_flags(todo_file):
+    runner.invoke(app, ["add", "h_task", "--high"])
+    runner.invoke(app, ["add", "m_task", "--med"])
+    runner.invoke(app, ["add", "l_task", "--low"])
+    runner.invoke(app, ["add", "n_task", "--never"])
+    out = _ls()
+    assert "h_task" in out
+    assert "m_task" in out
+    assert "l_task" in out
+    assert "n_task" in out
+
+
 def test_add_with_due_date(todo_file):
     runner.invoke(app, ["add", "alpha", "--due", "2026-06-10"])
     assert "2026-06-10" in _ls()
@@ -196,6 +208,12 @@ def test_edit_text(todo_file):
 def test_edit_priority(todo_file):
     runner.invoke(app, ["add", "alpha"])
     runner.invoke(app, ["edit", "1", "-h"])
+    assert "high" in _ls()
+
+
+def test_edit_long_priority_flag(todo_file):
+    runner.invoke(app, ["add", "alpha"])
+    runner.invoke(app, ["edit", "1", "--high"])
     assert "high" in _ls()
 
 

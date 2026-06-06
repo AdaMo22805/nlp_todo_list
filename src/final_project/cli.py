@@ -9,11 +9,21 @@ from rich.table import Table
 from . import commands as core
 from .models import Priority, Task
 
+_TOP_EXAMPLES = "\n\n".join([
+    "Examples:",
+    '  todo add "buy milk" --high --due 2026-06-10 --tag personal',
+    "  todo ls --group-by-tag",
+    "  todo done 1",
+    "  todo edit 2 --no-date",
+    "Run 'todo COMMAND --help' for details on any subcommand.",
+])
+
 app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
     context_settings={"help_option_names": ["--help"]},
     help="Smart todo list with NLP-friendly input.",
+    epilog=_TOP_EXAMPLES,
 )
 console = Console()
 
@@ -67,22 +77,43 @@ def _abort_on_value_error(fn, *args, **kwargs):
         raise typer.Exit(1) from e
 
 
-@app.command()
+@app.command(
+    epilog="\n\n".join([
+        "Examples:",
+        'todo add "buy milk"',
+        'todo add "finish project" --high --due 2026-06-10 --tag school',
+        'todo add "someday item" --never',
+        'todo add "groceries" -m --tag personal --tag errands',
+    ]),
+)
 def add(
-    text: Annotated[str, typer.Argument(help="Task description")],
+    text: Annotated[str, typer.Argument(help="The task description")],
     never: Annotated[
-        bool, typer.Option("-n", help="Never priority (also clears due date)")
+        bool,
+        typer.Option(
+            "-n", "--never",
+            help="Never priority — also clears any due date",
+        ),
     ] = False,
-    low: Annotated[bool, typer.Option("-l", help="Low priority (default)")] = False,
-    med: Annotated[bool, typer.Option("-m", help="Medium priority")] = False,
-    high: Annotated[bool, typer.Option("-h", help="High priority")] = False,
+    low: Annotated[
+        bool,
+        typer.Option("-l", "--low", help="Low priority (the default)"),
+    ] = False,
+    med: Annotated[
+        bool,
+        typer.Option("-m", "--med", help="Medium priority"),
+    ] = False,
+    high: Annotated[
+        bool,
+        typer.Option("-h", "--high", help="High priority"),
+    ] = False,
     due: Annotated[
         str | None,
-        typer.Option("--due", help="Due date (e.g. 2026-06-10)"),
+        typer.Option("--due", help="Due date in ISO format (e.g. 2026-06-10)"),
     ] = None,
     tag: Annotated[
         list[str] | None,
-        typer.Option("--tag", help="Tag (repeatable)"),
+        typer.Option("--tag", help="Tag for classification; repeat to apply multiple"),
     ] = None,
 ) -> None:
     """Add a new task."""
@@ -97,26 +128,44 @@ def add(
     console.print(f"[green]+[/green] Added [cyan]#{task.id}[/cyan] {task.text}")
 
 
-@app.command(name="ls")
+@app.command(
+    name="ls",
+    epilog="\n\n".join([
+        "Examples:",
+        "todo ls                      (active tasks only)",
+        "todo ls --all                (include completed)",
+        "todo ls --done               (only completed)",
+        "todo ls --tag school         (filter by tag)",
+        "todo ls --priority high      (filter by priority)",
+        "todo ls --group-by-tag       (one table per tag)",
+    ]),
+)
 def ls(
     all_: Annotated[
-        bool, typer.Option("--all", "-a", help="Include completed tasks")
+        bool,
+        typer.Option("--all", "-a", help="Include completed tasks in the output"),
     ] = False,
     done_only: Annotated[
-        bool, typer.Option("--done", help="Show only completed tasks")
+        bool,
+        typer.Option("--done", help="Show only completed tasks"),
     ] = False,
     tag: Annotated[
-        str | None, typer.Option("--tag", help="Filter by tag")
+        str | None,
+        typer.Option("--tag", help="Show only tasks with this tag"),
     ] = None,
     priority: Annotated[
-        Priority | None, typer.Option("--priority", help="Filter by priority")
+        Priority | None,
+        typer.Option(
+            "--priority",
+            help="Show only tasks at this priority (never/low/med/high)",
+        ),
     ] = None,
     group_by_tag: Annotated[
         bool,
         typer.Option(
             "--group-by-tag",
             "-g",
-            help="Group output by tag, sorted by priority within each",
+            help="Render one table per tag, sorted by priority within each",
         ),
     ] = False,
 ) -> None:
@@ -183,49 +232,83 @@ def _render_grouped(tasks: list[Task]) -> None:
         _render_table(groups[name], title=f"[bold magenta]#{name}[/bold magenta]")
 
 
-@app.command()
+@app.command(
+    epilog="Example:\n\ntodo done 1",
+)
 def done(
-    task_id: Annotated[int, typer.Argument(help="Task ID")],
+    task_id: Annotated[int, typer.Argument(help="ID of the task to complete")],
 ) -> None:
     """Mark a task done."""
     task = _abort_on_value_error(core.mark_done, task_id)
     console.print(f"[green]✓[/green] Done [cyan]#{task.id}[/cyan] {task.text}")
 
 
-@app.command()
+@app.command(
+    epilog="Example:\n\ntodo undone 1",
+)
 def undone(
-    task_id: Annotated[int, typer.Argument(help="Task ID")],
+    task_id: Annotated[int, typer.Argument(help="ID of the task to reopen")],
 ) -> None:
-    """Mark a task not done."""
+    """Mark a task not done (undoes a previous 'done')."""
     task = _abort_on_value_error(core.mark_undone, task_id)
     console.print(f"↻ Reopened [cyan]#{task.id}[/cyan] {task.text}")
 
 
-@app.command()
+@app.command(
+    epilog="\n\n".join([
+        "Examples:",
+        'todo edit 1 --text "new description"',
+        "todo edit 2 --high --due 2026-07-01",
+        "todo edit 3 --no-date --no-tags",
+        "todo edit 4 --tag school --tag urgent",
+    ]),
+)
 def edit(
-    task_id: Annotated[int, typer.Argument(help="Task ID")],
+    task_id: Annotated[int, typer.Argument(help="ID of the task to modify")],
     text: Annotated[
-        str | None, typer.Option("--text", help="New task description")
+        str | None,
+        typer.Option("--text", help="Replace the task description"),
     ] = None,
-    never: Annotated[bool, typer.Option("-n", help="Set never priority")] = False,
-    low: Annotated[bool, typer.Option("-l", help="Set low priority")] = False,
-    med: Annotated[bool, typer.Option("-m", help="Set medium priority")] = False,
-    high: Annotated[bool, typer.Option("-h", help="Set high priority")] = False,
+    never: Annotated[
+        bool,
+        typer.Option(
+            "-n", "--never",
+            help="Set never priority — also clears any due date",
+        ),
+    ] = False,
+    low: Annotated[
+        bool,
+        typer.Option("-l", "--low", help="Set low priority"),
+    ] = False,
+    med: Annotated[
+        bool,
+        typer.Option("-m", "--med", help="Set medium priority"),
+    ] = False,
+    high: Annotated[
+        bool,
+        typer.Option("-h", "--high", help="Set high priority"),
+    ] = False,
     due: Annotated[
-        str | None, typer.Option("--due", help="New due date")
+        str | None,
+        typer.Option("--due", help="Replace the due date (ISO format)"),
     ] = None,
     no_date: Annotated[
-        bool, typer.Option("--no-date", help="Clear due date")
+        bool,
+        typer.Option("--no-date", help="Clear the due date"),
     ] = False,
     tag: Annotated[
         list[str] | None,
-        typer.Option("--tag", help="Replace tags (repeatable)"),
+        typer.Option(
+            "--tag",
+            help="Replace tags; repeat to set multiple",
+        ),
     ] = None,
     no_tags: Annotated[
-        bool, typer.Option("--no-tags", help="Clear all tags")
+        bool,
+        typer.Option("--no-tags", help="Clear all tags"),
     ] = False,
 ) -> None:
-    """Edit a task."""
+    """Edit a task. Only the supplied fields change."""
     if due and no_date:
         raise typer.BadParameter("--due and --no-date are mutually exclusive.")
     if tag and no_tags:
@@ -248,14 +331,21 @@ def edit(
     console.print(f"[green]~[/green] Updated [cyan]#{task.id}[/cyan] {task.text}")
 
 
-@app.command()
+@app.command(
+    epilog="\n\n".join([
+        "Examples:",
+        "todo rm 1            (prompts before deleting)",
+        "todo rm 1 -y         (skip prompt)",
+    ]),
+)
 def rm(
-    task_id: Annotated[int, typer.Argument(help="Task ID")],
+    task_id: Annotated[int, typer.Argument(help="ID of the task to delete")],
     yes: Annotated[
-        bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")
+        bool,
+        typer.Option("--yes", "-y", help="Skip the confirmation prompt"),
     ] = False,
 ) -> None:
-    """Delete a task."""
+    """Delete a task. Prompts for confirmation unless --yes is given."""
     preview = _abort_on_value_error(_peek, task_id)
     if not yes and not typer.confirm(
         f"Delete task #{preview.id} '{preview.text}'?", default=False
@@ -266,13 +356,20 @@ def rm(
     console.print(f"[red]-[/red] Deleted [cyan]#{task.id}[/cyan] {task.text}")
 
 
-@app.command()
+@app.command(
+    epilog="\n\n".join([
+        "Examples:",
+        "todo clear           (prompts before clearing)",
+        "todo clear -y        (skip prompt)",
+    ]),
+)
 def clear(
     yes: Annotated[
-        bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")
+        bool,
+        typer.Option("--yes", "-y", help="Skip the confirmation prompt"),
     ] = False,
 ) -> None:
-    """Delete all completed tasks."""
+    """Delete every completed task. Pending tasks are not touched."""
     done_tasks = [t for t in core.list_tasks(show_done=True) if t.done]
     if not done_tasks:
         console.print("[dim]No completed tasks to clear.[/dim]")
@@ -286,13 +383,20 @@ def clear(
     console.print(f"[red]-[/red] Cleared {len(removed)} completed task(s).")
 
 
-@app.command()
+@app.command(
+    epilog="\n\n".join([
+        "Examples:",
+        "todo reset           (prompts before wiping)",
+        "todo reset -y        (skip prompt)",
+    ]),
+)
 def reset(
     yes: Annotated[
-        bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")
+        bool,
+        typer.Option("--yes", "-y", help="Skip the confirmation prompt"),
     ] = False,
 ) -> None:
-    """Delete ALL tasks (completed and pending). Cannot be undone."""
+    """Delete every task (completed and pending). Cannot be undone."""
     tasks = core.list_tasks(show_done=True)
     if not tasks:
         console.print("[dim]No tasks to delete.[/dim]")
