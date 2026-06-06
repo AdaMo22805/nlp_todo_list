@@ -133,6 +133,25 @@ def test_ls_group_by_tag_untagged_section(todo_file):
     assert "untagged" in out
 
 
+def test_ls_sort_order_due_first_then_priority(todo_file):
+    # Dated tasks come before undated; within dated, sort by date ascending;
+    # within same date (or undated), sort by priority high -> never.
+    runner.invoke(app, ["add", "undated_low", "-l"])
+    runner.invoke(app, ["add", "undated_high", "-h"])
+    runner.invoke(app, ["add", "late_high", "-h", "--due", "2026-07-15"])
+    runner.invoke(app, ["add", "early_low", "-l", "--due", "2026-06-10"])
+    runner.invoke(app, ["add", "early_high", "-h", "--due", "2026-06-10"])
+    out = _ls()
+    order = [
+        out.index("early_high"),
+        out.index("early_low"),
+        out.index("late_high"),
+        out.index("undated_high"),
+        out.index("undated_low"),
+    ]
+    assert order == sorted(order), f"unexpected order: {order}"
+
+
 # ---------- done / undone ----------
 
 def test_done_marks_task(todo_file):

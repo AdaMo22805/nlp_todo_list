@@ -141,7 +141,8 @@ def ls(
 
 
 def _sort_key(t: Task) -> tuple:
-    return (_PRIORITY_RANK[t.priority], t.due or "9999-99-99", t.id)
+    has_due = 0 if t.due is not None else 1
+    return (has_due, t.due or "", _PRIORITY_RANK[t.priority], t.id)
 
 
 def _render_table(tasks: list[Task], title: str | None = None) -> None:
