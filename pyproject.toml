@@ -7,7 +7,12 @@ authors = [
     { name = "admo", email = "adamo22805@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "python-dateutil>=2.9.0.post0",
+    "rapidfuzz>=3.14.5",
+    "rich>=15.0.0",
+    "typer>=0.26.7",
+]
 
 [project.scripts]
 final-project = "final_project:main"
@@ -15,3 +20,9 @@ final-project = "final_project:main"
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.16",
+]
