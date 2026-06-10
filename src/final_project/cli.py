@@ -1,14 +1,33 @@
+from __future__ import annotations
+
 from datetime import date
-from typing import Annotated
+from typing import List, Optional
+
+try:
+    from typing import Annotated
+except ImportError:
+    from typing_extensions import Annotated  # Python 3.8
 
 import typer
 from dateutil import parser as dateutil_parser
 from rich.console import Console
 from rich.table import Table
 
+from typer.main import TyperCommand
+
 from . import commands as core
 from .models import Priority, Task
 from .nlp import extract_date_from_text
+
+
+class _PositionalFirstCommand(TyperCommand):
+    """Prints positional arguments before [OPTIONS] in the usage line."""
+
+    def collect_usage_pieces(self, ctx: typer.Context) -> list[str]:
+        pieces = super().collect_usage_pieces(ctx)
+        opts = [p for p in pieces if p == "[OPTIONS]"]
+        args = [p for p in pieces if p != "[OPTIONS]"]
+        return args + opts
 
 _TOP_EXAMPLES = "\n\n".join([
     "Examples:",
@@ -79,6 +98,7 @@ def _abort_on_value_error(fn, *args, **kwargs):
 
 
 @app.command(
+    cls=_PositionalFirstCommand,
     epilog="\n\n".join([
         "Examples:",
         'todo add "buy milk"',
@@ -109,11 +129,11 @@ def add(
         typer.Option("-h", "--high", help="High priority"),
     ] = False,
     due: Annotated[
-        str | None,
+        Optional[str],
         typer.Option("--due", help="Due date in ISO format (e.g. 2026-06-10)"),
     ] = None,
     tag: Annotated[
-        list[str] | None,
+        Optional[List[str]],
         typer.Option("--tag", help="Tag for classification; repeat to apply multiple"),
     ] = None,
 ) -> None:
@@ -147,6 +167,7 @@ def add(
 
 
 @app.command(
+    cls=_PositionalFirstCommand,
     name="ls",
     epilog="\n\n".join([
         "Examples:",
@@ -168,11 +189,11 @@ def ls(
         typer.Option("--done", help="Show only completed tasks"),
     ] = False,
     tag: Annotated[
-        str | None,
+        Optional[str],
         typer.Option("--tag", help="Show only tasks with this tag"),
     ] = None,
     priority: Annotated[
-        Priority | None,
+        Optional[Priority],
         typer.Option(
             "--priority",
             help="Show only tasks at this priority (never/low/med/high)",
@@ -251,6 +272,7 @@ def _render_grouped(tasks: list[Task]) -> None:
 
 
 @app.command(
+    cls=_PositionalFirstCommand,
     epilog="Example:\n\ntodo done 1",
 )
 def done(
@@ -262,6 +284,7 @@ def done(
 
 
 @app.command(
+    cls=_PositionalFirstCommand,
     epilog="Example:\n\ntodo undone 1",
 )
 def undone(
@@ -273,6 +296,7 @@ def undone(
 
 
 @app.command(
+    cls=_PositionalFirstCommand,
     epilog="\n\n".join([
         "Examples:",
         'todo edit 1 --text "new description"',
@@ -284,7 +308,7 @@ def undone(
 def edit(
     task_id: Annotated[int, typer.Argument(help="ID of the task to modify")],
     text: Annotated[
-        str | None,
+        Optional[str],
         typer.Option("--text", help="Replace the task description"),
     ] = None,
     never: Annotated[
@@ -307,7 +331,7 @@ def edit(
         typer.Option("-h", "--high", help="Set high priority"),
     ] = False,
     due: Annotated[
-        str | None,
+        Optional[str],
         typer.Option("--due", help="Replace the due date (ISO format)"),
     ] = None,
     no_date: Annotated[
@@ -315,7 +339,7 @@ def edit(
         typer.Option("--no-date", help="Clear the due date"),
     ] = False,
     tag: Annotated[
-        list[str] | None,
+        Optional[List[str]],
         typer.Option(
             "--tag",
             help="Replace tags; repeat to set multiple",
@@ -350,6 +374,7 @@ def edit(
 
 
 @app.command(
+    cls=_PositionalFirstCommand,
     epilog="\n\n".join([
         "Examples:",
         "todo rm 1            (prompts before deleting)",
@@ -375,6 +400,7 @@ def rm(
 
 
 @app.command(
+    cls=_PositionalFirstCommand,
     epilog="\n\n".join([
         "Examples:",
         "todo clear           (prompts before clearing)",
@@ -402,6 +428,7 @@ def clear(
 
 
 @app.command(
+    cls=_PositionalFirstCommand,
     epilog="\n\n".join([
         "Examples:",
         "todo reset           (prompts before wiping)",

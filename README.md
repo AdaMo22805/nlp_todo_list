@@ -22,7 +22,7 @@ All subcommands are available as `todo <command>`. Run `todo --help` or
 ### `add` — Add a task
 
 ```
-todo add "<text>" [priority] [--due <date>] [--tag <tag>]
+todo add "<text>" [OPTIONS]
 ```
 
 | Flag | Description |
@@ -42,7 +42,7 @@ phrase (see [Pattern Matching](#pattern-matching) below).
 ### `ls` — List tasks
 
 ```
-todo ls [--all] [--done] [--tag <tag>] [--priority <level>] [--group-by-tag]
+todo ls [OPTIONS]
 ```
 
 | Flag | Description |
@@ -70,8 +70,7 @@ todo undone <id>
 ### `edit` — Modify a task
 
 ```
-todo edit <id> [--text "<new text>"] [priority] [--due <date>] [--no-date]
-              [--tag <tag>] [--no-tags]
+todo edit <id> [OPTIONS]
 ```
 
 Only the flags you supply are changed. `--no-date` clears the due date;
@@ -83,7 +82,7 @@ as are `--tag` and `--no-tags`.
 ### `rm` — Delete a task
 
 ```
-todo rm <id> [-y]
+todo rm <id> [OPTIONS]
 ```
 
 Prompts for confirmation unless `-y` / `--yes` is given.
@@ -93,7 +92,7 @@ Prompts for confirmation unless `-y` / `--yes` is given.
 ### `clear` — Remove all completed tasks
 
 ```
-todo clear [-y]
+todo clear [OPTIONS]
 ```
 
 Pending tasks are not affected.
@@ -103,7 +102,7 @@ Pending tasks are not affected.
 ### `reset` — Wipe everything
 
 ```
-todo reset [-y]
+todo reset [OPTIONS]
 ```
 
 Deletes all tasks, completed and pending.

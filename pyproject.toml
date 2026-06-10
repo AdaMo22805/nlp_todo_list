@@ -6,10 +6,9 @@ readme = "README.md"
 authors = [
     { name = "admo", email = "adamo22805@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
     "python-dateutil>=2.9.0.post0",
-    "rapidfuzz>=3.14.5",
     "rich>=15.0.0",
     "typer>=0.26.7",
 ]
