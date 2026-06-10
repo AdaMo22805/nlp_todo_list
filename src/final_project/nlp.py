@@ -33,6 +33,19 @@ def _first_day_of_next_month(d: date) -> date:
     return d.replace(day=1) + relativedelta(months=1)
 
 
+def _day_of_next_month(today: date, day: int) -> date:
+    first = _first_day_of_next_month(today)
+    return date(first.year, first.month, day)
+
+
+def _day_of_month(today: date, day: int) -> date:
+    """Return the Nth of current month if N >= today, else fall back to next month."""
+    last = calendar.monthrange(today.year, today.month)[1]
+    if day <= last and day >= today.day:
+        return date(today.year, today.month, day)
+    return _day_of_next_month(today, day)
+
+
 def _add_unit(d: date, n: int, unit: str) -> date:
     if unit.startswith("day"):
         return d + timedelta(days=n)
@@ -101,6 +114,22 @@ def parse_date_phrase(phrase: str, today: date | None = None) -> date | None:
         n = 1 if m.group(1) == "a" else int(m.group(1))
         return _add_unit(today, n, m.group(2))
 
+    # next month + ordinal  →  "next month 14th" / "next month the 14th"
+    m = re.fullmatch(r"next month (?:the )?(\d{1,2})(?:st|nd|rd|th)", s)
+    if m:
+        return _day_of_next_month(today, int(m.group(1)))
+
+    # ordinal + of next month  →  "14th of next month" / "on the 14th of next month"
+    m = re.fullmatch(r"(?:on )?(?:the )?(\d{1,2})(?:st|nd|rd|th) of next month", s)
+    if m:
+        return _day_of_next_month(today, int(m.group(1)))
+
+    # bare ordinal  →  "14th" / "the 14th" / "on the 14th"
+    # current month when day >= today, otherwise next month
+    m = re.fullmatch(r"(?:on )?(?:the )?(\d{1,2})(?:st|nd|rd|th)", s)
+    if m:
+        return _day_of_month(today, int(m.group(1)))
+
     # bare weekday name or abbreviation
     wd = _parse_weekday(s)
     if wd is not None:
@@ -118,6 +147,10 @@ _INLINE_PATTERNS: list[re.Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in
     rf"\bfirst {_WEEKDAY_PAT} of next month\b",
     r"\bend of week\b",
     r"\bend of month\b",
+    # "next month Nth" must come before bare "next month"
+    r"\bnext month (?:the )?\d{1,2}(?:st|nd|rd|th)\b",
+    r"\bon (?:the )?\d{1,2}(?:st|nd|rd|th) of next month\b",
+    r"\b(?:the )?\d{1,2}(?:st|nd|rd|th) of next month\b",
     r"\bnext month\b",
     rf"\bnext {_WEEKDAY_PAT}\b",
     rf"\b(?:this|upcoming) {_WEEKDAY_PAT}\b",
@@ -129,7 +162,11 @@ _INLINE_PATTERNS: list[re.Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in
     r"\btoday\b",
     r"\beow\b",
     r"\beom\b",
-    # bare weekday last (most ambiguous — only match after all multi-word attempts fail)
+    # ordinal day — "on the 14th" before bare "14th" to match longer form first
+    r"\bon (?:the )?\d{1,2}(?:st|nd|rd|th)\b",
+    r"\bthe \d{1,2}(?:st|nd|rd|th)\b",
+    r"\b\d{1,2}(?:st|nd|rd|th)\b",
+    # bare weekday last (most ambiguous)
     rf"\b{_WEEKDAY_PAT}\b",
 ]]
 

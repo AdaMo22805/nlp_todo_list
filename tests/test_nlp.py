@@ -187,3 +187,49 @@ def test_extract_no_match_unchanged(text):
     result_text, result_date = extract_date_from_text(text, today=TODAY)
     assert result_text == text
     assert result_date is None
+
+
+# ---------- ordinal day of month ----------
+
+@pytest.mark.parametrize("phrase,expected", [
+    # future or today → current month
+    ("14th",        date(2026, 6, 14)),
+    ("the 14th",    date(2026, 6, 14)),
+    ("on the 14th", date(2026, 6, 14)),
+    ("22nd",        date(2026, 6, 22)),
+    ("10th",        date(2026, 6, 10)),  # today's date is still valid
+    # already past in current month → next month
+    ("9th",         date(2026, 7,  9)),
+    ("1st",         date(2026, 7,  1)),
+    ("on the 3rd",  date(2026, 7,  3)),
+    # day exceeds days in current month → next month
+    ("31st",        date(2026, 7, 31)),
+])
+def test_ordinal_day_of_month(phrase, expected):
+    assert parse_date_phrase(phrase, today=TODAY) == expected
+
+
+@pytest.mark.parametrize("phrase,expected", [
+    ("next month 14th",           date(2026, 7, 14)),
+    ("next month the 14th",       date(2026, 7, 14)),
+    ("14th of next month",        date(2026, 7, 14)),
+    ("the 14th of next month",    date(2026, 7, 14)),
+    ("on the 14th of next month", date(2026, 7, 14)),
+    ("1st of next month",         date(2026, 7,  1)),
+])
+def test_ordinal_day_of_next_month(phrase, expected):
+    assert parse_date_phrase(phrase, today=TODAY) == expected
+
+
+# ---------- extract_date_from_text — ordinals ----------
+
+@pytest.mark.parametrize("text,exp_text,exp_date", [
+    ("dentist on the 14th",        "dentist",  date(2026, 6, 14)),
+    ("dentist the 22nd",           "dentist",  date(2026, 6, 22)),
+    ("pay rent 1st of next month", "pay rent", date(2026, 7,  1)),
+    ("call mom next month 14th",   "call mom", date(2026, 7, 14)),
+])
+def test_extract_ordinal(text, exp_text, exp_date):
+    result_text, result_date = extract_date_from_text(text, today=TODAY)
+    assert result_text == exp_text
+    assert result_date == exp_date
