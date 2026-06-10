@@ -107,3 +107,51 @@ def parse_date_phrase(phrase: str, today: date | None = None) -> date | None:
         return _next_weekday(wd, today)
 
     return None
+
+
+# ---------- inline extraction ----------
+
+_WEEKDAY_PAT = r"(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)"
+
+_INLINE_PATTERNS: list[re.Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in [
+    # most specific (multi-word) first to avoid partial matches
+    rf"\bfirst {_WEEKDAY_PAT} of next month\b",
+    r"\bend of week\b",
+    r"\bend of month\b",
+    r"\bnext month\b",
+    rf"\bnext {_WEEKDAY_PAT}\b",
+    rf"\b(?:this|upcoming) {_WEEKDAY_PAT}\b",
+    r"\bin (?:\d+|a) (?:days?|weeks?|months?)\b",
+    r"\b(?:\d+|a) (?:days?|weeks?|months?) from now\b",
+    r"\btomorrow\b",
+    r"\btmrw\b",
+    r"\btmr\b",
+    r"\btoday\b",
+    r"\beow\b",
+    r"\beom\b",
+    # bare weekday last (most ambiguous — only match after all multi-word attempts fail)
+    rf"\b{_WEEKDAY_PAT}\b",
+]]
+
+
+def extract_date_from_text(
+    text: str, today: date | None = None
+) -> tuple[str, date | None]:
+    """Scan text for an inline date phrase; return (cleaned_text, date) or (text, None).
+
+    The first matching phrase is extracted and removed; surrounding whitespace is
+    collapsed.  Returns the original text unchanged when no phrase is found.
+    """
+    if today is None:
+        today = date.today()
+
+    for pattern in _INLINE_PATTERNS:
+        m = pattern.search(text)
+        if m:
+            parsed = parse_date_phrase(m.group(0), today=today)
+            if parsed is not None:
+                cleaned = (text[: m.start()] + text[m.end() :]).strip()
+                cleaned = re.sub(r" {2,}", " ", cleaned)
+                return cleaned, parsed
+
+    return text, None

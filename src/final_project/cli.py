@@ -8,6 +8,7 @@ from rich.table import Table
 
 from . import commands as core
 from .models import Priority, Task
+from .nlp import extract_date_from_text
 
 _TOP_EXAMPLES = "\n\n".join([
     "Examples:",
@@ -118,14 +119,31 @@ def add(
 ) -> None:
     """Add a new task."""
     priority = _resolve_priority_flags(never, low, med, high) or Priority.LOW
-    due_iso = None if priority is Priority.NEVER else (_parse_due(due) if due else None)
+
+    raw = text
+    extracted_date: date | None = None
+
+    # NLP extraction runs only when --due is omitted and priority isn't NEVER
+    if due is None and priority is not Priority.NEVER:
+        text, extracted_date = extract_date_from_text(text)
+
+    if priority is Priority.NEVER:
+        due_iso = None
+    elif due is not None:
+        due_iso = _parse_due(due)
+    else:
+        due_iso = extracted_date.isoformat() if extracted_date else None
+
     task = core.create_task(
         text=text,
         priority=priority,
         due=due_iso,
         tags=list(tag) if tag else [],
+        raw=raw,
     )
     console.print(f"[green]+[/green] Added [cyan]#{task.id}[/cyan] {task.text}")
+    if extracted_date:
+        console.print(f"  [dim]→ due {task.due}[/dim]")
 
 
 @app.command(

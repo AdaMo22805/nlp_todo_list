@@ -14,7 +14,7 @@ from datetime import date
 
 import pytest
 
-from final_project.nlp import parse_date_phrase
+from final_project.nlp import extract_date_from_text, parse_date_phrase
 
 TODAY = date(2026, 6, 10)  # Wednesday
 
@@ -154,3 +154,36 @@ def test_first_weekday_of_next_month(phrase, expected):
 ])
 def test_no_match_returns_none(phrase):
     assert parse_date_phrase(phrase, today=TODAY) is None
+
+
+# ---------- extract_date_from_text ----------
+
+@pytest.mark.parametrize("text,exp_text,exp_date", [
+    ("dentist friday",             "dentist",         date(2026, 6, 12)),
+    ("friday dentist",             "dentist",         date(2026, 6, 12)),
+    ("call mom tomorrow",          "call mom",        date(2026, 6, 11)),
+    ("review pr tmr",              "review pr",       date(2026, 6, 11)),
+    ("submit report in 3 days",    "submit report",   date(2026, 6, 13)),
+    ("dentist 2 weeks from now",   "dentist",         date(2026, 6, 24)),
+    ("finish project next monday", "finish project",  date(2026, 6, 22)),
+    ("team meeting this thursday", "team meeting",    date(2026, 6, 11)),
+    ("wrap up eow",                "wrap up",         date(2026, 6, 12)),
+    ("pay rent eom",               "pay rent",        date(2026, 6, 30)),
+    ("dentist today",              "dentist",         date(2026, 6, 10)),
+])
+def test_extract_removes_phrase_and_returns_date(text, exp_text, exp_date):
+    result_text, result_date = extract_date_from_text(text, today=TODAY)
+    assert result_text == exp_text
+    assert result_date == exp_date
+
+
+@pytest.mark.parametrize("text", [
+    "buy milk",
+    "call dentist",
+    "read book",
+    "",
+])
+def test_extract_no_match_unchanged(text):
+    result_text, result_date = extract_date_from_text(text, today=TODAY)
+    assert result_text == text
+    assert result_date is None
