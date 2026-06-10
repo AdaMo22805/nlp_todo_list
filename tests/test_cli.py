@@ -1,3 +1,4 @@
+import json
 import re
 
 from typer.testing import CliRunner
@@ -346,3 +347,46 @@ def test_reset_empty(todo_file):
     result = runner.invoke(app, ["reset"])
     assert result.exit_code == 0
     assert "No tasks" in _clean(result.output)
+
+
+# ---------- NLP inline extraction ----------
+
+def test_add_nlp_cleans_text_and_sets_due(todo_file):
+    runner.invoke(app, ["add", "dentist friday"])
+    data = json.loads(todo_file.read_text())
+    assert data[0]["text"] == "dentist"
+    assert data[0]["due"] is not None
+
+
+def test_add_nlp_raw_preserves_original(todo_file):
+    runner.invoke(app, ["add", "dentist friday"])
+    data = json.loads(todo_file.read_text())
+    assert data[0]["raw"] == "dentist friday"
+    assert data[0]["text"] == "dentist"
+
+
+def test_add_explicit_due_overrides_nlp(todo_file):
+    runner.invoke(app, ["add", "dentist friday", "--due", "2026-07-01"])
+    data = json.loads(todo_file.read_text())
+    assert data[0]["due"] == "2026-07-01"
+    assert data[0]["text"] == "dentist friday"  # no NLP stripping when --due given
+
+
+def test_add_never_priority_skips_nlp(todo_file):
+    runner.invoke(app, ["add", "dentist friday", "-n"])
+    data = json.loads(todo_file.read_text())
+    assert data[0]["due"] is None
+    assert data[0]["text"] == "dentist friday"  # no stripping when priority=never
+
+
+def test_add_nlp_shows_extracted_due(todo_file):
+    result = runner.invoke(app, ["add", "call mom tomorrow"])
+    assert result.exit_code == 0
+    assert "→ due" in _clean(result.output)
+
+
+def test_add_no_nlp_match_no_due(todo_file):
+    runner.invoke(app, ["add", "buy milk"])
+    data = json.loads(todo_file.read_text())
+    assert data[0]["due"] is None
+    assert data[0]["text"] == "buy milk"
