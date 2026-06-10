@@ -233,3 +233,45 @@ def test_extract_ordinal(text, exp_text, exp_date):
     result_text, result_date = extract_date_from_text(text, today=TODAY)
     assert result_text == exp_text
     assert result_date == exp_date
+
+
+# ---------- named month ----------
+
+@pytest.mark.parametrize("phrase,expected", [
+    # month + day, future → current year
+    ("june 14",       date(2026, 6, 14)),
+    ("june 14th",     date(2026, 6, 14)),
+    ("jun 14",        date(2026, 6, 14)),
+    ("jun 14th",      date(2026, 6, 14)),
+    ("June 14",       date(2026, 6, 14)),   # case insensitive
+    ("JUNE 14",       date(2026, 6, 14)),
+    ("july 4",        date(2026, 7,  4)),
+    ("december 25",   date(2026, 12, 25)),
+    ("dec 25",        date(2026, 12, 25)),
+    # today's date
+    ("june 10",       date(2026, 6, 10)),
+    # past in current year → roll to next year
+    ("june 9",        date(2027, 6,  9)),
+    ("may 15",        date(2027, 5, 15)),
+    ("january 1",     date(2027, 1,  1)),
+    ("jan 1",         date(2027, 1,  1)),
+    # day + month formats
+    ("14 june",       date(2026, 6, 14)),
+    ("14th june",     date(2026, 6, 14)),
+    ("14th of june",  date(2026, 6, 14)),
+    ("3rd of jul",    date(2026, 7,  3)),
+])
+def test_named_month(phrase, expected):
+    assert parse_date_phrase(phrase, today=TODAY) == expected
+
+
+@pytest.mark.parametrize("text,exp_text,exp_date", [
+    ("dentist june 14",        "dentist",  date(2026, 6, 14)),
+    ("pay bills july 4th",     "pay bills", date(2026, 7,  4)),
+    ("birthday 14th of june",  "birthday", date(2026, 6, 14)),
+    ("submit jan 1",           "submit",   date(2027, 1,  1)),
+])
+def test_extract_named_month(text, exp_text, exp_date):
+    result_text, result_date = extract_date_from_text(text, today=TODAY)
+    assert result_text == exp_text
+    assert result_date == exp_date

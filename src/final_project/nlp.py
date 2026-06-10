@@ -4,6 +4,27 @@ from datetime import date, timedelta
 
 from dateutil.relativedelta import relativedelta
 
+_MONTH_MAP: dict[str, int] = {
+    "january": 1,   "jan": 1,
+    "february": 2,  "feb": 2,
+    "march": 3,     "mar": 3,
+    "april": 4,     "apr": 4,
+    "may": 5,
+    "june": 6,      "jun": 6,
+    "july": 7,      "jul": 7,
+    "august": 8,    "aug": 8,
+    "september": 9, "sep": 9,  "sept": 9,
+    "october": 10,  "oct": 10,
+    "november": 11, "nov": 11,
+    "december": 12, "dec": 12,
+}
+
+_MONTH_PAT = (
+    r"(?:january|february|march|april|may|june|july|august"
+    r"|september|october|november|december"
+    r"|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)"
+)
+
 _WEEKDAY_MAP: dict[str, int] = {
     "monday": 0,    "mon": 0,
     "tuesday": 1,   "tue": 1,
@@ -44,6 +65,17 @@ def _day_of_month(today: date, day: int) -> date:
     if day <= last and day >= today.day:
         return date(today.year, today.month, day)
     return _day_of_next_month(today, day)
+
+
+def _resolve_month_day(today: date, month: int, day: int) -> date | None:
+    """Return month/day this year, or next year if that date is already past."""
+    try:
+        candidate = date(today.year, month, day)
+    except ValueError:
+        return None
+    if candidate < today:
+        candidate = date(today.year + 1, month, day)
+    return candidate
 
 
 def _add_unit(d: date, n: int, unit: str) -> date:
@@ -114,6 +146,20 @@ def parse_date_phrase(phrase: str, today: date | None = None) -> date | None:
         n = 1 if m.group(1) == "a" else int(m.group(1))
         return _add_unit(today, n, m.group(2))
 
+    # month name + day  →  "june 14" / "june 14th" / "jun 14th"
+    m = re.fullmatch(rf"({_MONTH_PAT}) (?:the )?(\d{{1,2}})(?:st|nd|rd|th)?", s)
+    if m:
+        result = _resolve_month_day(today, _MONTH_MAP[m.group(1)], int(m.group(2)))
+        if result is not None:
+            return result
+
+    # day + month name  →  "14 june" / "14th june" / "14th of june"
+    m = re.fullmatch(rf"(\d{{1,2}})(?:st|nd|rd|th)? (?:of )?({_MONTH_PAT})", s)
+    if m:
+        result = _resolve_month_day(today, _MONTH_MAP[m.group(2)], int(m.group(1)))
+        if result is not None:
+            return result
+
     # next month + ordinal  →  "next month 14th" / "next month the 14th"
     m = re.fullmatch(r"next month (?:the )?(\d{1,2})(?:st|nd|rd|th)", s)
     if m:
@@ -162,6 +208,9 @@ _INLINE_PATTERNS: list[re.Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in
     r"\btoday\b",
     r"\beow\b",
     r"\beom\b",
+    # named month + day — before bare ordinals so "june 14th" isn't split on "14th"
+    rf"\b{_MONTH_PAT} (?:the )?\d{{1,2}}(?:st|nd|rd|th)?\b",
+    rf"\b\d{{1,2}}(?:st|nd|rd|th)? (?:of )?{_MONTH_PAT}\b",
     # ordinal day — "on the 14th" before bare "14th" to match longer form first
     r"\bon (?:the )?\d{1,2}(?:st|nd|rd|th)\b",
     r"\bthe \d{1,2}(?:st|nd|rd|th)\b",
