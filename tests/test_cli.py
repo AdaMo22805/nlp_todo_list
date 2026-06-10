@@ -369,7 +369,7 @@ def test_add_explicit_due_overrides_nlp(todo_file):
     runner.invoke(app, ["add", "dentist friday", "--due", "2026-07-01"])
     data = json.loads(todo_file.read_text())
     assert data[0]["due"] == "2026-07-01"
-    assert data[0]["text"] == "dentist friday"  # no stripping when --due given
+    assert data[0]["text"] == "dentist friday"  # no NLP stripping when --due given
 
 
 def test_add_never_priority_skips_nlp(todo_file):
